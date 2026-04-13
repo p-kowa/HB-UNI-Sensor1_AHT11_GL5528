@@ -26,7 +26,7 @@
 // #define USE_OTA_BOOTLOADER
 
 #define SENSOR_ONLY
-//#define USE_DISPLAY
+#define USE_DISPLAY
 #define NDEBUG
 
 // Display update interval: only refresh e-paper every N send cycles
@@ -426,7 +426,7 @@ public:
         strcpy(displayStr, "Bat:");
         strcat(displayStr, batterieStr);
         strcat(displayStr, "V");
-        display.printText(displayStr, 0, 4);
+        display.printText(displayStr, 0, 3);
 
 #ifdef SENSOR_LDR
         // Row 3: Lux (GL5528)
@@ -434,7 +434,7 @@ public:
         strcpy(displayStr, "L:");
         strcat(displayStr, luxStr);
         strcat(displayStr, "lx");
-        display.printText(displayStr, 0, 3);
+        display.printText(displayStr, 0, 2);
 #endif
 
         display.updateDisplay();
