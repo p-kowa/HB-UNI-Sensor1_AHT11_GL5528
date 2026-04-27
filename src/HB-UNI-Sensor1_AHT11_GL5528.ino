@@ -55,6 +55,8 @@
 #ifdef USE_DISPLAY
     #include <epd154.h>
     EPD154 display(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY);  // pins defined in Cfg/Device_Config.h
+    static void epdPowerOn();
+    static void epdPowerOff();
 #endif
 
 // Redefine MSBFIRST and LSBFIRST after including the Adafruit libraries
@@ -402,12 +404,7 @@ public:
             displayCycleCount = 0;
 
         // Power on the display via P-MOSFET (LOW = ON)
-        // SPI pins low before enabling power to avoid back-feed through ESD diodes
-        digitalWrite(EPD_CS,  LOW);
-        digitalWrite(EPD_DC,  LOW);
-        digitalWrite(EPD_RST, LOW);
-        digitalWrite(EPD_POWER_PIN, LOW);
-        delay(50);   // wait for supply to stabilise before init
+        epdPowerOn();
 
         // CC1101 CS HIGH + Hardware-SPI aus + Interrupts sperren
         // (CC1101-ISR würde sonst MOSI/SCK während Bit-Bang übernehmen → Frame-Korruption)
@@ -453,14 +450,8 @@ public:
         interrupts();                 // CC1101-ISR wieder erlaubt
         SPCR |= (1 << SPE);           // Hardware-SPI wieder an für CC1101
 
-        // Pull SPI lines low before cutting display power to prevent
-        // back-feed through EPD ESD protection diodes
-        digitalWrite(EPD_CS,  LOW);
-        digitalWrite(EPD_DC,  LOW);
-        digitalWrite(EPD_RST, LOW);
-
         // Power off the display via P-MOSFET (HIGH = OFF)
-        digitalWrite(EPD_POWER_PIN, HIGH);
+        epdPowerOff();
         }
         #endif
     }
@@ -546,6 +537,23 @@ public:
 SensChannelDevice               sdev(devinfo, 0x20);
 ConfigButton<SensChannelDevice> cfgBtn(sdev);
 
+#ifdef USE_DISPLAY
+static void epdPowerOn() {
+    digitalWrite(EPD_CS,  LOW);
+    digitalWrite(EPD_DC,  LOW);
+    digitalWrite(EPD_RST, LOW);
+    digitalWrite(EPD_POWER_PIN, LOW);
+    delay(50);
+}
+
+static void epdPowerOff() {
+    digitalWrite(EPD_CS,  LOW);
+    digitalWrite(EPD_DC,  LOW);
+    digitalWrite(EPD_RST, LOW);
+    digitalWrite(EPD_POWER_PIN, HIGH);
+}
+#endif
+
 void setup()
 {
     
@@ -555,8 +563,7 @@ void setup()
     digitalWrite(EPD_POWER_PIN, HIGH);   // display off by default
 
     // Power on for startup splash
-    digitalWrite(EPD_POWER_PIN, LOW);
-    delay(50);
+    epdPowerOn();
     display.init();
     display.clearDisplay();
     display.setRotation(1);
@@ -565,10 +572,7 @@ void setup()
     display.updateDisplay();
 
     // Power off display after splash — MCU sleeps between measurements
-    digitalWrite(EPD_CS,  LOW);
-    digitalWrite(EPD_DC,  LOW);
-    digitalWrite(EPD_RST, LOW);
-    digitalWrite(EPD_POWER_PIN, HIGH);
+    epdPowerOff();
     #endif
 
     DINIT(57600, ASKSIN_PLUS_PLUS_IDENTIFIER);
