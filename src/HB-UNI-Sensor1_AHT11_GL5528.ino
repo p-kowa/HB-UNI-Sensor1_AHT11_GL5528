@@ -401,12 +401,23 @@ public:
         if (displayCycleCount >= DISPLAY_UPDATE_CYCLES) {
             displayCycleCount = 0;
 
+        // Power on the display via P-MOSFET (LOW = ON)
+        // SPI pins low before enabling power to avoid back-feed through ESD diodes
+        digitalWrite(EPD_CS,  LOW);
+        digitalWrite(EPD_DC,  LOW);
+        digitalWrite(EPD_RST, LOW);
+        digitalWrite(EPD_POWER_PIN, LOW);
+        delay(50);   // wait for supply to stabilise before init
+
         // CC1101 CS HIGH + Hardware-SPI aus + Interrupts sperren
         // (CC1101-ISR würde sonst MOSI/SCK während Bit-Bang übernehmen → Frame-Korruption)
         digitalWrite(10, HIGH);
         SPCR &= ~(1 << SPE);  // Hardware-SPI aus
         noInterrupts();       // CC1101-ISR blockieren (waitBusy nutzt jetzt delayMicroseconds!)
 
+        // display.init() not needed: updateDisplay() calls epd_init() internally,
+        // which performs a hardware reset (RST) that works equally for cold-start
+        // and wake-from-deep-sleep.
         display.clearDisplay();
         display.setRotation(1);
 
@@ -441,6 +452,15 @@ public:
 
         interrupts();                 // CC1101-ISR wieder erlaubt
         SPCR |= (1 << SPE);           // Hardware-SPI wieder an für CC1101
+
+        // Pull SPI lines low before cutting display power to prevent
+        // back-feed through EPD ESD protection diodes
+        digitalWrite(EPD_CS,  LOW);
+        digitalWrite(EPD_DC,  LOW);
+        digitalWrite(EPD_RST, LOW);
+
+        // Power off the display via P-MOSFET (HIGH = OFF)
+        digitalWrite(EPD_POWER_PIN, HIGH);
         }
         #endif
     }
@@ -530,12 +550,25 @@ void setup()
 {
     
     #ifdef USE_DISPLAY
+    // Configure MOSFET gate: HIGH keeps display off until needed
+    pinMode(EPD_POWER_PIN, OUTPUT);
+    digitalWrite(EPD_POWER_PIN, HIGH);   // display off by default
+
+    // Power on for startup splash
+    digitalWrite(EPD_POWER_PIN, LOW);
+    delay(50);
     display.init();
     display.clearDisplay();
     display.setRotation(1);
     display.printText("HB-UNI-AHT11", 0, 0);
     display.printText("Starte...", 0, 1);
     display.updateDisplay();
+
+    // Power off display after splash — MCU sleeps between measurements
+    digitalWrite(EPD_CS,  LOW);
+    digitalWrite(EPD_DC,  LOW);
+    digitalWrite(EPD_RST, LOW);
+    digitalWrite(EPD_POWER_PIN, HIGH);
     #endif
 
     DINIT(57600, ASKSIN_PLUS_PLUS_IDENTIFIER);

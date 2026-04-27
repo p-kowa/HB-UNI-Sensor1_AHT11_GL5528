@@ -43,6 +43,9 @@
 #define EPD_DC    7   // data / command
 #define EPD_RST   6   // hardware reset
 #define EPD_BUSY  3   // busy signal (HIGH = busy)
+// P-channel MOSFET gate for display power control (replaces unused LED D2).
+// LOW = display powered ON, HIGH = display powered OFF (pull-up holds gate HIGH during sleep).
+#define EPD_POWER_PIN 5
 
 //---------------------------------------------------------
 // Pin und Address Definitionen Sensoren
