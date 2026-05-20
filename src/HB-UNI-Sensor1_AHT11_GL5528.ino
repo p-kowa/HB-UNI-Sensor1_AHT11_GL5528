@@ -403,7 +403,7 @@ public:
         if (displayCycleCount >= DISPLAY_UPDATE_CYCLES) {
             displayCycleCount = 0;
 
-        // Power on the display via P-MOSFET (LOW = ON)
+        // Power on the display via N-MOSFET (HIGH = ON)
         epdPowerOn();
 
         // CC1101 CS HIGH + Hardware-SPI aus + Interrupts sperren
@@ -450,7 +450,7 @@ public:
         interrupts();                 // CC1101-ISR wieder erlaubt
         SPCR |= (1 << SPE);           // Hardware-SPI wieder an für CC1101
 
-        // Power off the display via P-MOSFET (HIGH = OFF)
+        // Power off the display via N-MOSFET (LOW = OFF)
         epdPowerOff();
         }
         #endif
@@ -542,7 +542,7 @@ static void epdPowerOn() {
     digitalWrite(EPD_CS,  LOW);
     digitalWrite(EPD_DC,  LOW);
     digitalWrite(EPD_RST, LOW);
-    digitalWrite(EPD_POWER_PIN, LOW);
+    digitalWrite(EPD_POWER_PIN, HIGH);  // N-MOSFET: HIGH = GND connected = display ON
     delay(50);
 }
 
@@ -550,7 +550,7 @@ static void epdPowerOff() {
     digitalWrite(EPD_CS,  LOW);
     digitalWrite(EPD_DC,  LOW);
     digitalWrite(EPD_RST, LOW);
-    digitalWrite(EPD_POWER_PIN, HIGH);
+    digitalWrite(EPD_POWER_PIN, LOW);   // N-MOSFET: LOW = GND disconnected = display OFF
 }
 #endif
 
@@ -558,9 +558,9 @@ void setup()
 {
     
     #ifdef USE_DISPLAY
-    // Configure MOSFET gate: HIGH keeps display off until needed
+    // pinMode OUTPUT drives pin LOW by default (ATmega reset state),
+    // which keeps the N-MOSFET off until epdPowerOn() is called.
     pinMode(EPD_POWER_PIN, OUTPUT);
-    digitalWrite(EPD_POWER_PIN, HIGH);   // display off by default
 
     // Power on for startup splash
     epdPowerOn();
